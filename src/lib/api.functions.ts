@@ -362,11 +362,32 @@ export const runTest = createServerFn({ method: "POST" })
           })
           .select("id")
           .single();
-        if (nextError || !nextRun) continue;
+        if (nextError || !nextRun) {
+          throw new Error(
+            `Could not record form ${i + 1} of ${formsToRecord.length}: ${
+              nextError?.message ?? "run row was not created"
+            }`,
+          );
+        }
         currentRunId = nextRun.id as string;
       }
 
       allRunIds.push(currentRunId);
+
+      if (f.ok === false) {
+        await supabase
+          .from("runs")
+          .update({
+            status: "failed",
+            outcome: "error",
+            passed: false,
+            page_title: f.heading ?? null,
+            error_message:
+              f.message ?? f.reason ?? "This form could not be filled by the automated test.",
+          })
+          .eq("id", currentRunId);
+        continue;
+      }
 
       const upload = async (b64: string | null | undefined, name: string) => {
         if (!b64) return null;
