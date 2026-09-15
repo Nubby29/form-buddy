@@ -1,15 +1,34 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQueryClient } from "@tanstack/react-query";
-import { Play, Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Square, RotateCcw } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Play, Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Square, RotateCcw, ListPlus, Save, FolderOpen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { runTest, type TestMode } from "@/lib/api.functions";
+import { runTest, listTargets, type TestMode } from "@/lib/api.functions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  loadSavedBatches,
+  addSavedBatch,
+  removeSavedBatch,
+  type SavedBatch,
+} from "@/lib/saved-batches";
 import { cn } from "@/lib/utils";
+
+type TargetRow = { id: string; name: string; url: string };
 
 export interface BatchItem {
   id: string;
@@ -50,6 +69,36 @@ export function BatchTester({
   const [isRunning, setIsRunning] = useState(false);
   const cancelRef = useRef(false);
 
+  /* ---- saved targets picker ---- */
+  const fetchTargets = useServerFn(listTargets);
+  const { data: targets = [] } = useQuery({
+    queryKey: ["targets"],
+    queryFn: async () => (await fetchTargets()) as unknown as TargetRow[],
+  });
+  const [pickOpen, setPickOpen] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const allPicked = targets.length > 0 && picked.length === targets.length;
+
+  function insertPicked() {
+    const urls = targets.filter((t) => picked.includes(t.id)).map((t) => t.url);
+    if (urls.length === 0) return;
+    setRawText((prev) => {
+      const existing = prev.split("\n").map((l) => l.trim()).filter(Boolean);
+      const merged = [...existing, ...urls.filter((u) => !existing.includes(u))];
+      return merged.join("\n");
+    });
+    setPickOpen(false);
+    setPicked([]);
+    toast.success(`${urls.length} saved ${urls.length === 1 ? "site" : "sites"} added`);
+  }
+
+  /* ---- saved batch presets (localStorage) ---- */
+  const [batches, setBatches] = useState<SavedBatch[]>([]);
+  useEffect(() => setBatches(loadSavedBatches()), []);
+  const [saveBatchOpen, setSaveBatchOpen] = useState(false);
+  const [batchName, setBatchName] = useState("");
+
+
   // Parse lines into clean valid URLs
   const parseUrls = (text: string): string[] => {
     return text
@@ -60,6 +109,19 @@ export function BatchTester({
   };
 
   const detectedUrls = parseUrls(rawText);
+
+  function saveCurrentBatch() {
+    if (!batchName.trim() || detectedUrls.length === 0) return;
+    setBatches(addSavedBatch(batchName.trim(), detectedUrls));
+    setBatchName("");
+    setSaveBatchOpen(false);
+    toast.success("Batch saved");
+  }
+
+  function loadBatch(batch: SavedBatch) {
+    setRawText(batch.urls.join("\n"));
+    toast.success(`Loaded "${batch.name}" (${batch.urls.length} URLs)`);
+  }
 
   async function startBatch(urlsToRun?: BatchItem[]) {
     cancelRef.current = false;
@@ -164,6 +226,75 @@ export function BatchTester({
     <div className="space-y-4">
       {!isRunning && total === 0 && (
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setPickOpen(true)}
+              disabled={targets.length === 0}
+            >
+              <ListPlus className="mr-1.5 h-3.5 w-3.5" /> Select from saved URLs
+            </Button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
+                  <FolderOpen className="mr-1.5 h-3.5 w-3.5" /> Saved batches ({batches.length})
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-80 p-2">
+                {batches.length === 0 ? (
+                  <p className="p-2 text-xs text-muted-foreground">
+                    No saved batches yet. Add URLs below, then choose “Save batch”.
+                  </p>
+                ) : (
+                  <div className="max-h-64 space-y-1 overflow-y-auto">
+                    {batches.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-accent/50"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => loadBatch(b)}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <span className="block truncate text-xs font-medium text-foreground">
+                            {b.name}
+                          </span>
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            {b.urls.length} {b.urls.length === 1 ? "URL" : "URLs"}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Delete ${b.name}`}
+                          onClick={() => setBatches(removeSavedBatch(b.id))}
+                          className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              disabled={detectedUrls.length === 0}
+              onClick={() => setSaveBatchOpen(true)}
+            >
+              <Save className="mr-1.5 h-3.5 w-3.5" /> Save batch
+            </Button>
+          </div>
+
           <div>
             <div className="mb-1 flex items-center justify-between">
               <label className="text-xs font-medium text-muted-foreground">
@@ -349,6 +480,86 @@ export function BatchTester({
           </div>
         </div>
       )}
+
+      <Dialog open={pickOpen} onOpenChange={setPickOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Select saved URLs</DialogTitle>
+            <DialogDescription>Pick the saved sites to add to this batch.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 border-b border-border pb-2 text-xs font-medium">
+              <Checkbox
+                checked={allPicked}
+                onCheckedChange={(v) => setPicked(v ? targets.map((t) => t.id) : [])}
+              />
+              Select all ({targets.length})
+            </label>
+            <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
+              {targets.map((t) => (
+                <label
+                  key={t.id}
+                  className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent/50"
+                >
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={picked.includes(t.id)}
+                    onCheckedChange={(v) =>
+                      setPicked((prev) =>
+                        v ? [...prev, t.id] : prev.filter((id) => id !== t.id),
+                      )
+                    }
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs text-foreground">{t.name}</span>
+                    <span className="block truncate font-mono text-[10px] text-muted-foreground">
+                      {t.url}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setPickOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={insertPicked} disabled={picked.length === 0}>
+                Add {picked.length || ""} to batch
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={saveBatchOpen} onOpenChange={setSaveBatchOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save this batch</DialogTitle>
+            <DialogDescription>
+              Store these {detectedUrls.length} URLs under a name so you can reload them later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="batch-name">Batch name</Label>
+              <Input
+                id="batch-name"
+                value={batchName}
+                onChange={(e) => setBatchName(e.target.value)}
+                placeholder="e.g. Client landing pages"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setSaveBatchOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={saveCurrentBatch} disabled={!batchName.trim()}>
+                Save batch
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
