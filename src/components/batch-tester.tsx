@@ -480,6 +480,86 @@ export function BatchTester({
           </div>
         </div>
       )}
+
+      <Dialog open={pickOpen} onOpenChange={setPickOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Select saved URLs</DialogTitle>
+            <DialogDescription>Pick the saved sites to add to this batch.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 border-b border-border pb-2 text-xs font-medium">
+              <Checkbox
+                checked={allPicked}
+                onCheckedChange={(v) => setPicked(v ? targets.map((t) => t.id) : [])}
+              />
+              Select all ({targets.length})
+            </label>
+            <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
+              {targets.map((t) => (
+                <label
+                  key={t.id}
+                  className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent/50"
+                >
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={picked.includes(t.id)}
+                    onCheckedChange={(v) =>
+                      setPicked((prev) =>
+                        v ? [...prev, t.id] : prev.filter((id) => id !== t.id),
+                      )
+                    }
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs text-foreground">{t.name}</span>
+                    <span className="block truncate font-mono text-[10px] text-muted-foreground">
+                      {t.url}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setPickOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={insertPicked} disabled={picked.length === 0}>
+                Add {picked.length || ""} to batch
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={saveBatchOpen} onOpenChange={setSaveBatchOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save this batch</DialogTitle>
+            <DialogDescription>
+              Store these {detectedUrls.length} URLs under a name so you can reload them later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="batch-name">Batch name</Label>
+              <Input
+                id="batch-name"
+                value={batchName}
+                onChange={(e) => setBatchName(e.target.value)}
+                placeholder="e.g. Client landing pages"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setSaveBatchOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={saveCurrentBatch} disabled={!batchName.trim()}>
+                Save batch
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
