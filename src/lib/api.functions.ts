@@ -32,15 +32,18 @@ type FieldResult = {
 
 type SingleFormResult = {
   formIndex: number;
-  heading?: string;
-  formSelector?: string;
-  fields?: FieldResult[];
-  submitLabel?: string;
-  submitted?: boolean;
-  outcome?: string;
-  resultText?: string;
-  filledShot?: string | null;
-  resultShot?: string | null;
+  ok?: boolean | undefined;
+  reason?: string | undefined;
+  message?: string | undefined;
+  heading?: string | undefined;
+  formSelector?: string | undefined;
+  fields?: FieldResult[] | undefined;
+  submitLabel?: string | undefined;
+  submitted?: boolean | undefined;
+  outcome?: string | undefined;
+  resultText?: string | undefined;
+  filledShot?: string | null | undefined;
+  resultShot?: string | null | undefined;
 };
 
 type RunnerResult = {
