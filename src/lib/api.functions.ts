@@ -454,6 +454,37 @@ export const runTest = createServerFn({ method: "POST" })
     return { id: runId, ids: allRunIds };
   });
 
+function decodeHtmlEntities(str: string): string {
+  let prev = "";
+  let curr = str;
+  for (let i = 0; i < 3 && prev !== curr; i++) {
+    prev = curr;
+    curr = curr
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, "\"")
+      .replace(/&apos;/g, "'")
+      .replace(/&#0*39;/g, "'")
+      .replace(/&#x0*27;/gi, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&ndash;/g, "–")
+      .replace(/&mdash;/g, "—")
+      .replace(/&lsquo;|&rsquo;/g, "'")
+      .replace(/&ldquo;|&rdquo;/g, "\"")
+      .replace(/&hellip;/g, "…")
+      .replace(/&#(\d+);/g, (_, dec) => {
+        const code = parseInt(dec, 10);
+        return code > 0 && code < 65536 ? String.fromCharCode(code) : "";
+      })
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+        const code = parseInt(hex, 16);
+        return code > 0 && code < 65536 ? String.fromCharCode(code) : "";
+      });
+  }
+  return curr;
+}
+
 export const fetchPageTitle = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -470,7 +501,8 @@ export const fetchPageTitle = createServerFn({ method: "POST" })
       const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
       if (match && match[1]) {
         const raw = match[1].trim().replace(/\s+/g, " ");
-        const clean = raw.split(/[|•–—]/)[0].trim() || raw;
+        const decoded = decodeHtmlEntities(raw);
+        const clean = decoded.split(/[|•–—]/)[0].trim() || decoded;
         return { title: clean };
       }
     } catch {}

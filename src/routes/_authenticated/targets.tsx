@@ -32,6 +32,37 @@ export const Route = createFileRoute("/_authenticated/targets")({
   component: TargetsPage,
 });
 
+function decodeHtmlEntities(str: string): string {
+  let prev = "";
+  let curr = str;
+  for (let i = 0; i < 3 && prev !== curr; i++) {
+    prev = curr;
+    curr = curr
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, "\"")
+      .replace(/&apos;/g, "'")
+      .replace(/&#0*39;/g, "'")
+      .replace(/&#x0*27;/gi, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&ndash;/g, "–")
+      .replace(/&mdash;/g, "—")
+      .replace(/&lsquo;|&rsquo;/g, "'")
+      .replace(/&ldquo;|&rdquo;/g, "\"")
+      .replace(/&hellip;/g, "…")
+      .replace(/&#(\d+);/g, (_, dec) => {
+        const code = parseInt(dec, 10);
+        return code > 0 && code < 65536 ? String.fromCharCode(code) : "";
+      })
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+        const code = parseInt(hex, 16);
+        return code > 0 && code < 65536 ? String.fromCharCode(code) : "";
+      });
+  }
+  return curr;
+}
+
 function deriveSiteNameFromUrl(rawUrl: string): string {
   try {
     const trimmed = rawUrl.trim();
@@ -119,7 +150,7 @@ function TargetsPage() {
       try {
         const res = await getTitle({ data: { url: newUrl } });
         if (res && res.title && !isNameManuallyEdited) {
-          setName(res.title);
+          setName(decodeHtmlEntities(res.title));
         }
       } catch {}
     }
@@ -134,7 +165,7 @@ function TargetsPage() {
       handleUrlChange(val);
       return;
     }
-    setName(val);
+    setName(decodeHtmlEntities(val));
     setIsNameManuallyEdited(val.trim().length > 0);
   };
 
