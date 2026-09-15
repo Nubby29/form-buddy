@@ -14,7 +14,184 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      run_fields: {
+        Row: {
+          field_type: string | null
+          filled: boolean
+          id: string
+          label: string | null
+          note: string | null
+          order_index: number
+          required: boolean
+          run_id: string
+          selector: string | null
+          user_id: string
+          value_used: string | null
+        }
+        Insert: {
+          field_type?: string | null
+          filled?: boolean
+          id?: string
+          label?: string | null
+          note?: string | null
+          order_index?: number
+          required?: boolean
+          run_id: string
+          selector?: string | null
+          user_id: string
+          value_used?: string | null
+        }
+        Update: {
+          field_type?: string | null
+          filled?: boolean
+          id?: string
+          label?: string | null
+          note?: string | null
+          order_index?: number
+          required?: boolean
+          run_id?: string
+          selector?: string | null
+          user_id?: string
+          value_used?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_fields_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      runs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          fields_filled: number
+          fields_found: number
+          filled_shot_path: string | null
+          form_selector: string | null
+          id: string
+          is_public: boolean
+          mode: string
+          outcome: string | null
+          page_title: string | null
+          passed: boolean | null
+          result_shot_path: string | null
+          result_text: string | null
+          share_token: string
+          status: string
+          target_id: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          fields_filled?: number
+          fields_found?: number
+          filled_shot_path?: string | null
+          form_selector?: string | null
+          id?: string
+          is_public?: boolean
+          mode?: string
+          outcome?: string | null
+          page_title?: string | null
+          passed?: boolean | null
+          result_shot_path?: string | null
+          result_text?: string | null
+          share_token?: string
+          status?: string
+          target_id?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          fields_filled?: number
+          fields_found?: number
+          filled_shot_path?: string | null
+          form_selector?: string | null
+          id?: string
+          is_public?: boolean
+          mode?: string
+          outcome?: string | null
+          page_title?: string | null
+          passed?: boolean | null
+          result_shot_path?: string | null
+          result_text?: string | null
+          share_token?: string
+          status?: string
+          target_id?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "runs_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      targets: {
+        Row: {
+          created_at: string
+          default_mode: string
+          id: string
+          name: string
+          notes: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_mode?: string
+          id?: string
+          name: string
+          notes?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_mode?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
