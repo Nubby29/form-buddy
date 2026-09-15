@@ -69,6 +69,36 @@ export function BatchTester({
   const [isRunning, setIsRunning] = useState(false);
   const cancelRef = useRef(false);
 
+  /* ---- saved targets picker ---- */
+  const fetchTargets = useServerFn(listTargets);
+  const { data: targets = [] } = useQuery({
+    queryKey: ["targets"],
+    queryFn: async () => (await fetchTargets()) as unknown as TargetRow[],
+  });
+  const [pickOpen, setPickOpen] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const allPicked = targets.length > 0 && picked.length === targets.length;
+
+  function insertPicked() {
+    const urls = targets.filter((t) => picked.includes(t.id)).map((t) => t.url);
+    if (urls.length === 0) return;
+    setRawText((prev) => {
+      const existing = prev.split("\n").map((l) => l.trim()).filter(Boolean);
+      const merged = [...existing, ...urls.filter((u) => !existing.includes(u))];
+      return merged.join("\n");
+    });
+    setPickOpen(false);
+    setPicked([]);
+    toast.success(`${urls.length} saved ${urls.length === 1 ? "site" : "sites"} added`);
+  }
+
+  /* ---- saved batch presets (localStorage) ---- */
+  const [batches, setBatches] = useState<SavedBatch[]>([]);
+  useEffect(() => setBatches(loadSavedBatches()), []);
+  const [saveBatchOpen, setSaveBatchOpen] = useState(false);
+  const [batchName, setBatchName] = useState("");
+
+
   // Parse lines into clean valid URLs
   const parseUrls = (text: string): string[] => {
     return text
