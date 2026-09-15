@@ -1,15 +1,34 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQueryClient } from "@tanstack/react-query";
-import { Play, Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Square, RotateCcw } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Play, Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Square, RotateCcw, ListPlus, Save, FolderOpen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { runTest, type TestMode } from "@/lib/api.functions";
+import { runTest, listTargets, type TestMode } from "@/lib/api.functions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  loadSavedBatches,
+  addSavedBatch,
+  removeSavedBatch,
+  type SavedBatch,
+} from "@/lib/saved-batches";
 import { cn } from "@/lib/utils";
+
+type TargetRow = { id: string; name: string; url: string };
 
 export interface BatchItem {
   id: string;
