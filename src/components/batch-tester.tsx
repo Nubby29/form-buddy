@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Play, Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Square, RotateCcw, ListPlus, Save, FolderOpen, Trash2 } from "lucide-react";
+import { Play, Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Square, RotateCcw, ListPlus, Save, FolderOpen, Trash2, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
-import { runTest, listTargets, type TestMode } from "@/lib/api.functions";
+import { runTest, listTargets, listRuns, type TestMode } from "@/lib/api.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,7 @@ export interface BatchItem {
   targetId?: string | undefined;
   status: "idle" | "queued" | "running" | "passed" | "failed" | "error";
   runId?: string | undefined;
+  runIds?: string[] | undefined;
   fieldsFilled?: number | undefined;
   fieldsFound?: number | undefined;
   errorMessage?: string | undefined;
@@ -77,6 +78,26 @@ export function BatchTester({
   });
   const [pickOpen, setPickOpen] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+
+  /* ---- batch summary (one-click results view) ---- */
+  type RunSummary = {
+    id: string;
+    url: string;
+    mode: string;
+    status: string;
+    outcome: string | null;
+    passed: boolean | null;
+    created_at: string;
+    fields_found: number;
+    fields_filled: number;
+  };
+  const fetchRuns = useServerFn(listRuns);
+  const { data: recentRuns = [] } = useQuery({
+    queryKey: ["batch-summary-runs"],
+    queryFn: async () => (await fetchRuns()) as unknown as RunSummary[],
+    enabled: summaryOpen,
+  });
   const allPicked = targets.length > 0 && picked.length === targets.length;
 
   function insertPicked() {
@@ -179,6 +200,11 @@ export function BatchTester({
                   ...item,
                   status: "passed",
                   runId: res.id,
+                  runIds: Array.isArray((res as { ids?: unknown }).ids)
+                    ? (res as { ids: string[] }).ids.filter((x): x is string => typeof x === "string")
+                    : res.id
+                      ? [res.id]
+                      : [],
                   durationMs: Date.now() - startTime,
                 }
               : item
@@ -453,6 +479,16 @@ export function BatchTester({
                   type="button"
                   variant="outline"
                   size="sm"
+                  onClick={() => setSummaryOpen(true)}
+                  disabled={completed === 0}
+                  className="h-8 text-xs"
+                >
+                  <ClipboardList className="mr-1.5 h-3 w-3" /> Batch results ({completed})
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     setItems([]);
                     setIsRunning(false);
@@ -526,6 +562,100 @@ export function BatchTester({
               <Button type="button" onClick={insertPicked} disabled={picked.length === 0}>
                 Add {picked.length || ""} to batch
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Batch results</DialogTitle>
+            <DialogDescription>
+              Every page tested in this batch with its outcome and report links, in one view.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-4 rounded-md border border-border bg-card/60 px-3 py-2 font-mono text-xs">
+              <span className="text-emerald-400">&#10003; {passedCount} passed</span>
+              <span className="text-red-400">&#10007; {failedCount} failed</span>
+              <span className="text-muted-foreground">{completed}/{total} processed</span>
+            </div>
+            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+              {items.map((item, idx) => {
+                const runIds = item.runIds?.length
+                  ? item.runIds
+                  : item.runId
+                    ? [item.runId]
+                    : [];
+                const isFailed = item.status === "failed" || item.status === "error";
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-xs",
+                      item.status === "passed"
+                        ? "border-emerald-500/30 bg-emerald-500/5"
+                        : isFailed
+                          ? "border-destructive/30 bg-destructive/5"
+                          : "border-border bg-card",
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="font-mono text-[10px] text-muted-foreground">#{idx + 1}</span>
+                        {item.status === "passed" && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />}
+                        {isFailed && <XCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />}
+                        {!isFailed && item.status !== "passed" && (
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        )}
+                        <span className="truncate font-mono text-foreground">{item.url}</span>
+                      </div>
+                      <span
+                        className={cn(
+                          "shrink-0 font-mono text-[10px]",
+                          item.status === "passed"
+                            ? "text-emerald-400"
+                            : isFailed
+                              ? "text-red-400"
+                              : "text-muted-foreground",
+                        )}
+                      >
+                        {item.status === "passed"
+                          ? "PASSED"
+                          : isFailed
+                            ? "FAILED"
+                            : item.status.toUpperCase()}
+                      </span>
+                    </div>
+                    {item.errorMessage && (
+                      <p className="mt-1 pl-8 font-mono text-[10px] text-red-400">
+                        {item.errorMessage.slice(0, 140)}
+                      </p>
+                    )}
+                    {runIds.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5 pl-8">
+                        {runIds.map((rid, formIdx) => {
+                          const rec = recentRuns.find((r) => r.id === rid);
+                          return (
+                            <Link
+                              key={rid}
+                              to="/runs/$id"
+                              params={{ id: rid }}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground hover:border-primary/50 hover:text-primary"
+                            >
+                              {runIds.length > 1 ? `Form ${formIdx + 1}` : "Report"}
+                              {rec ? ` • ${rec.fields_filled}/${rec.fields_found} fields` : ""}
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </DialogContent>
