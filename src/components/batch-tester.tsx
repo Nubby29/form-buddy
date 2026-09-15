@@ -110,6 +110,19 @@ export function BatchTester({
 
   const detectedUrls = parseUrls(rawText);
 
+  function saveCurrentBatch() {
+    if (!batchName.trim() || detectedUrls.length === 0) return;
+    setBatches(addSavedBatch(batchName.trim(), detectedUrls));
+    setBatchName("");
+    setSaveBatchOpen(false);
+    toast.success("Batch saved");
+  }
+
+  function loadBatch(batch: SavedBatch) {
+    setRawText(batch.urls.join("\n"));
+    toast.success(`Loaded "${batch.name}" (${batch.urls.length} URLs)`);
+  }
+
   async function startBatch(urlsToRun?: BatchItem[]) {
     cancelRef.current = false;
     let queue: BatchItem[] = [];
