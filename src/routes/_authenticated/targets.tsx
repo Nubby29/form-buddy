@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Plus, Trash2, ExternalLink, Globe, Play } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Globe, Play, Layers } from "lucide-react";
+import { BatchTester } from "@/components/batch-tester";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { RunForm } from "@/components/run-form";
@@ -38,6 +39,7 @@ function TargetsPage() {
   const removeTarget = useServerFn(deleteTarget);
 
   const [open, setOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
   const [activeTargetId, setActiveTargetId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
@@ -97,12 +99,35 @@ function TargetsPage() {
             Save forms you frequently test to rerun checks with one click.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" /> Add Site
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          {targets.length > 0 && (
+            <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 font-mono text-xs">
+                  <Layers className="h-4 w-4" /> Batch test all ({targets.length})
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Batch test saved sites</DialogTitle>
+                  <DialogDescription>
+                    Run automated form tests across your saved websites.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="pt-2">
+                  <BatchTester
+                    initialUrls={targets.map((t: any) => ({ url: t.url, targetId: t.id }))}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-2">
+                <Plus className="h-4 w-4" /> Add Site
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Save a target site</DialogTitle>
