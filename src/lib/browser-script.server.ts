@@ -281,7 +281,40 @@ export default async ({ page, context }) => {
           const ph = (el.getAttribute("placeholder") || "").toLowerCase();
 
           if (type === "email" || has(h, "email", "e-mail")) return "qa.tester+" + Math.floor(Math.random() * 900 + 100) + "@example.com";
-          if (type === "tel" || has(h, "phone", "tel", "mobile")) return "+1 415 555 0142";
+          if (type === "tel" || has(h, "phone", "tel", "mobile")) {
+            let hasCountrySelected = false;
+            try {
+              const grp = el.closest(".elementor-field-type-tel, .iti, [class*='phone'], [class*='tel'], .elementor-field-group, .form-group, fieldset, div") || el.parentElement;
+              if (grp) {
+                if (grp.querySelector(".iti__selected-dial-code, [class*='selected-dial-code'], .iti__flag-container, .ccfef-editor-intl-input, [data-dial-code-visibility]")) {
+                  hasCountrySelected = true;
+                } else {
+                  const grpText = (grp.textContent || "").replace(/\s+/g, " ");
+                  if (grpText.includes("+1") || /\+\d{1,4}/.test(grpText)) {
+                    hasCountrySelected = true;
+                  }
+                }
+              }
+              if (!hasCountrySelected && el.form) {
+                if (el.form.querySelector(".iti__selected-dial-code, [class*='selected-dial-code'], .iti__flag")) {
+                  hasCountrySelected = true;
+                }
+                const countrySelect = el.form.querySelector('select[name*="country" i], select[name*="dial" i], select[name*="phone_code" i], select[name*="country_code" i]');
+                if (countrySelect && countrySelect.value) {
+                  hasCountrySelected = true;
+                }
+              }
+              if (!hasCountrySelected && /^\(?\d{3}\)?[-. ]?\d{3}[-. ]?\d{4}$/.test(ph.trim())) {
+                hasCountrySelected = true;
+              }
+            } catch (e) {}
+
+            if (hasCountrySelected) {
+              if (ph.includes("(") || ph.includes(")")) return "(415) 555-0142";
+              return "415 555 0142";
+            }
+            return "+1 415 555 0142";
+          }
           if (type === "url" || has(h, "website", "url")) return "https://example.com";
           if (type === "password") return "TestPass!2468";
           if (el.tagName.toLowerCase() === "textarea" || has(h, "message", "comment", "enquiry", "inquiry", "details", "description", "note")) {

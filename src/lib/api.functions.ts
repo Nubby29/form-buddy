@@ -193,7 +193,38 @@ export const getRun = createServerFn({ method: "GET" })
       .eq("run_id", data.id)
       .order("order_index");
     const shots = await signedShots(run.filled_shot_path, run.result_shot_path);
-    return { run, fields: fields ?? [], ...shots };
+
+    let siblings: Array<{
+      id: string;
+      page_title: string | null;
+      form_selector: string | null;
+      passed: boolean | null;
+      outcome: string | null;
+      fields_found: number;
+      fields_filled: number;
+      created_at: string;
+    }> = [];
+
+    try {
+      const createdAtMs = new Date(run.created_at).getTime();
+      const windowStart = new Date(createdAtMs - 120_000).toISOString();
+      const windowEnd = new Date(createdAtMs + 120_000).toISOString();
+
+      const { data: sibs } = await context.supabase
+        .from("runs")
+        .select("id, page_title, form_selector, passed, outcome, fields_found, fields_filled, created_at")
+        .eq("user_id", run.user_id)
+        .eq("url", run.url)
+        .gte("created_at", windowStart)
+        .lte("created_at", windowEnd)
+        .order("created_at", { ascending: true });
+
+      if (sibs && sibs.length > 1) {
+        siblings = sibs;
+      }
+    } catch {}
+
+    return { run, fields: fields ?? [], siblings, ...shots };
   });
 
 export const setRunSharing = createServerFn({ method: "POST" })
@@ -239,8 +270,40 @@ export const getSharedReport = createServerFn({ method: "GET" })
       .eq("run_id", run.id)
       .order("order_index");
     const shots = await signedShots(run.filled_shot_path, run.result_shot_path);
+
+    let siblings: Array<{
+      id: string;
+      page_title: string | null;
+      form_selector: string | null;
+      passed: boolean | null;
+      outcome: string | null;
+      fields_found: number;
+      fields_filled: number;
+      created_at: string;
+      share_token?: string;
+    }> = [];
+
+    try {
+      const createdAtMs = new Date(run.created_at).getTime();
+      const windowStart = new Date(createdAtMs - 120_000).toISOString();
+      const windowEnd = new Date(createdAtMs + 120_000).toISOString();
+
+      const { data: sibs } = await supabaseAdmin
+        .from("runs")
+        .select("id, page_title, form_selector, passed, outcome, fields_found, fields_filled, created_at, share_token, is_public")
+        .eq("user_id", run.user_id)
+        .eq("url", run.url)
+        .gte("created_at", windowStart)
+        .lte("created_at", windowEnd)
+        .order("created_at", { ascending: true });
+
+      if (sibs && sibs.length > 1) {
+        siblings = sibs.filter((s: any) => s.is_public);
+      }
+    } catch {}
+
     const { user_id: _userId, ...safeRun } = run;
-    return { run: safeRun, fields: fields ?? [], ...shots };
+    return { run: safeRun, fields: fields ?? [], siblings, ...shots };
   });
 
 /* --------------------------------- execution -------------------------------- */

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Printer } from "lucide-react";
@@ -30,6 +30,7 @@ export const Route = createFileRoute("/r/$token")({
 
 function SharedReport() {
   const { token } = Route.useParams();
+  const navigate = useNavigate();
   const fetchReport = useServerFn(getSharedReport);
   const { data, isLoading, error } = useQuery({
     queryKey: ["shared", token],
@@ -62,6 +63,12 @@ function SharedReport() {
             fields={data.fields}
             filledUrl={data.filledUrl}
             resultUrl={data.resultUrl}
+            siblings={data.siblings}
+            onSelectSibling={(sibling) => {
+              if (sibling.share_token) {
+                navigate({ to: "/r/$token", params: { token: sibling.share_token } });
+              }
+            }}
           />
         )}
       </main>

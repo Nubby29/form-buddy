@@ -1,4 +1,4 @@
-import { Check, X, Minus, ExternalLink } from "lucide-react";
+import { Check, X, Minus, ExternalLink, Layers } from "lucide-react";
 import { MODE_LABELS, OUTCOME_LABELS, formatDate, outcomeTone, toneClasses } from "@/lib/report-format";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,19 @@ type RunRow = {
   created_at: string;
 };
 
+
+export type SiblingRun = {
+  id: string;
+  page_title: string | null;
+  form_selector: string | null;
+  passed: boolean | null;
+  outcome: string | null;
+  fields_found: number;
+  fields_filled: number;
+  created_at?: string;
+  share_token?: string;
+};
+
 type FieldRow = {
   id: string;
   label: string | null;
@@ -35,11 +48,15 @@ export function ReportView({
   fields,
   filledUrl,
   resultUrl,
+  siblings,
+  onSelectSibling,
 }: {
   run: RunRow;
   fields: FieldRow[];
   filledUrl: string | null;
   resultUrl: string | null;
+  siblings?: SiblingRun[];
+  onSelectSibling?: (sibling: SiblingRun) => void;
 }) {
   const tone = run.status === "failed" ? "fail" : outcomeTone(run.outcome, run.passed);
   const verdict =
@@ -47,6 +64,72 @@ export function ReportView({
 
   return (
     <div className="space-y-6">
+      {siblings && siblings.length > 1 && (
+        <section className="no-print rounded-xl border border-border bg-card/60 p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" />
+              <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                Multiple forms tested on this page ({siblings.length})
+              </span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              Switch form to view its individual results
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            {siblings.map((sib, idx) => {
+              const isCurrent = sib.id === run.id;
+              const formNum = idx + 1;
+              let formLabel = `Form ${formNum}`;
+              if (sib.page_title) {
+                const match = sib.page_title.match(/Form \d+[:\s•]*(.*)/i);
+                if (match && match[1]?.trim()) {
+                  formLabel = `Form ${formNum}: ${match[1].trim()}`;
+                }
+              }
+              const sibPassed = sib.passed;
+              return (
+                <button
+                  key={sib.id}
+                  type="button"
+                  onClick={() => onSelectSibling?.(sib)}
+                  className={cn(
+                    "group inline-flex items-center gap-2.5 rounded-lg border px-3.5 py-2 text-left text-sm transition-all cursor-pointer",
+                    isCurrent
+                      ? "border-primary bg-primary/10 text-primary font-medium shadow-sm ring-1 ring-primary/30"
+                      : "border-border bg-card hover:border-border/80 hover:bg-accent/40 text-foreground",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                      sibPassed
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                        : "bg-destructive/15 text-destructive",
+                    )}
+                  >
+                    {sibPassed ? "✓" : "✗"}
+                  </span>
+                  <div className="min-w-0">
+                    <span className="block truncate max-w-[14rem] sm:max-w-[20rem] font-medium">
+                      {formLabel}
+                    </span>
+                    <span className="block font-mono text-[11px] text-muted-foreground">
+                      {sib.fields_filled}/{sib.fields_found} fields • {sibPassed ? "Passed" : "Needs review"}
+                    </span>
+                  </div>
+                  {isCurrent && (
+                    <span className="ml-1 rounded bg-primary/20 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary">
+                      Viewing
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
       <section className="rounded-xl border border-border bg-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">

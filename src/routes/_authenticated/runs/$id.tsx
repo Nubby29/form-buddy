@@ -126,6 +126,10 @@ function RunReport() {
         fields={data.fields}
         filledUrl={data.filledUrl}
         resultUrl={data.resultUrl}
+        siblings={data.siblings}
+        onSelectSibling={(sibling) => {
+          navigate({ to: "/runs/$id", params: { id: sibling.id } });
+        }}
       />
     </AppShell>
   );
