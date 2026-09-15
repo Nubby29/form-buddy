@@ -441,13 +441,30 @@ export default async ({ page, context }) => {
 
           try {
             if (type === "file") {
-              if (entry.required) {
-                entry.value_used = "(file upload skipped)";
-                entry.filled = false;
-                entry.note = "required file upload cannot be automated";
-              } else {
-                entry.value_used = "(optional file upload skipped)";
-                entry.filled = true;
+              try {
+                const dt = new DataTransfer();
+                const mockFile = new File(
+                  ["Automated form test sample document content."],
+                  "sample_resume.pdf",
+                  { type: "application/pdf" }
+                );
+                dt.items.add(mockFile);
+                el.files = dt.files;
+                triggerChange(el);
+                entry.value_used = "sample_resume.pdf";
+                entry.filled = (el.files && el.files.length > 0) || (!el.validity || el.validity.valid);
+                if (!entry.filled && entry.required) {
+                  entry.note = "file upload could not be attached";
+                }
+              } catch (e) {
+                if (entry.required) {
+                  entry.value_used = "(file upload skipped)";
+                  entry.filled = false;
+                  entry.note = "required file upload cannot be automated";
+                } else {
+                  entry.value_used = "(optional file upload skipped)";
+                  entry.filled = true;
+                }
               }
             } else if (type === "checkbox") {
               if (!el.checked) el.click();
@@ -483,7 +500,16 @@ export default async ({ page, context }) => {
               const v = valueFor(el, h);
               setNative(el, v);
               entry.value_used = v;
-              entry.filled = el.value === v;
+              let isFilled = el.value === v;
+              if (!isFilled && (type === "tel" || has(h, "phone", "tel", "mobile"))) {
+                const digitsEl = (el.value || "").replace(/\D/g, "");
+                const digitsV = (v || "").replace(/\D/g, "");
+                isFilled = digitsEl.length >= 7 && (digitsEl.includes(digitsV) || digitsV.includes(digitsEl));
+              }
+              if (!isFilled && el.value && el.value.trim().length > 0) {
+                isFilled = !el.validity || el.validity.valid;
+              }
+              entry.filled = !!isFilled;
               if (!entry.filled) entry.note = "value rejected by the page";
             }
           } catch (err) {
