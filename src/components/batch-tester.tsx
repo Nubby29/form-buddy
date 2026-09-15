@@ -14,13 +14,13 @@ import { cn } from "@/lib/utils";
 export interface BatchItem {
   id: string;
   url: string;
-  targetId?: string;
+  targetId?: string | undefined;
   status: "idle" | "queued" | "running" | "passed" | "failed" | "error";
-  runId?: string;
-  fieldsFilled?: number;
-  fieldsFound?: number;
-  errorMessage?: string;
-  durationMs?: number;
+  runId?: string | undefined;
+  fieldsFilled?: number | undefined;
+  fieldsFound?: number | undefined;
+  errorMessage?: string | undefined;
+  durationMs?: number | undefined;
 }
 
 export function BatchTester({
