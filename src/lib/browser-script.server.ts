@@ -313,6 +313,7 @@ export default async ({ page, context }) => {
           if (has(h, "first name", "firstname", "given", "fname") && !has(h, "last name", "lastname", "surname", "family", "lname")) return "Jordan";
           if (has(h, "last name", "lastname", "surname", "family", "lname")) return "Ellis";
           if (has(h, "company", "organisation", "organization", "business")) return "Northwind Testing Ltd";
+          if (has(h, "location", "city, state", "preferred job location", "locations")) return "San Francisco, CA";
           if (has(h, "job", "role", "title") && !has(h, "subject")) return "QA Engineer";
           if (has(h, "subject")) return "Automated form test";
           if (has(h, "address", "street")) return "120 Market Street";
