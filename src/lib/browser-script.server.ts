@@ -1,6 +1,6 @@
 // Source of the script executed inside the remote Browserless browser.
 // It is sent as plain text, so it must be self-contained ES module source.
-export const BROWSER_SCRIPT = `
+export const BROWSER_SCRIPT = String.raw`
 
 export default async ({ page, context }) => {
   const url = context.url;
@@ -121,8 +121,10 @@ export default async ({ page, context }) => {
             }
           }
           if (!t) t = el.getAttribute("aria-label") || "";
-          if (!t && el.getAttribute("placeholder") && !/^(yyyy|dd\/mm|mm\/dd|select|choose|enter|type)/i.test(el.getAttribute("placeholder"))) {
-            t = el.getAttribute("placeholder");
+          const rawPh = (el.getAttribute("placeholder") || "").trim();
+          const isGenericPh = /^(yyyy|dd|mm|select|choose|enter|type)/i.test(rawPh) || rawPh.includes("yyyy") || rawPh.includes("dd/mm") || rawPh.includes("mm/dd");
+          if (!t && rawPh && !isGenericPh) {
+            t = rawPh;
           }
         } catch (e) {}
         return (t || "").replace(/\s+/g, " ").trim().slice(0, 80);
