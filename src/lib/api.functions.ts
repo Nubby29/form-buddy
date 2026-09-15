@@ -293,10 +293,10 @@ export const runTest = createServerFn({ method: "POST" })
     if (!result.ok) {
       const reason =
         result.reason === "no_fields"
-          ? "No fillable form fields were found on this page."
+          ? (result.message || "No fillable form fields were found on this page.")
           : result.reason === "navigation_failed"
             ? `The page could not be loaded: ${result.message ?? "unknown error"}`
-            : (result.message ?? "The test could not be completed.");
+            : (result.message || result.reason || "The test could not be completed.");
       return fail(reason);
     }
 
