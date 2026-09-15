@@ -500,7 +500,23 @@ export default async ({ page, context }) => {
         };
       }, fIdx);
 
-      if (!plan || !plan.ok) continue;
+      if (!plan || !plan.ok) {
+        formResults.push({
+          formIndex: fIdx,
+          ok: false,
+          heading: meta.heading,
+          reason: (plan && plan.reason) || "plan_failed",
+          message: (plan && plan.message) || "This form could not be prepared for testing.",
+          formSelector: meta.selector,
+          fields: [],
+          submitted: false,
+          outcome: "error",
+          resultText: "",
+          filledShot: null,
+          resultShot: null,
+        });
+        continue;
+      }
 
       // Small wait to allow DOM to visually reflect input values
       await new Promise(function (r) { setTimeout(r, 1200); });
