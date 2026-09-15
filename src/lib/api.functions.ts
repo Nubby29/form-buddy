@@ -30,11 +30,25 @@ type FieldResult = {
   note: string;
 };
 
+type SingleFormResult = {
+  formIndex: number;
+  heading?: string;
+  formSelector?: string;
+  fields?: FieldResult[];
+  submitLabel?: string;
+  submitted?: boolean;
+  outcome?: string;
+  resultText?: string;
+  filledShot?: string | null;
+  resultShot?: string | null;
+};
+
 type RunnerResult = {
   ok: boolean;
   reason?: string;
   message?: string;
   title?: string;
+  forms?: SingleFormResult[];
   fields?: FieldResult[];
   formSelector?: string;
   submitLabel?: string;
@@ -308,60 +322,110 @@ export const runTest = createServerFn({ method: "POST" })
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const upload = async (b64: string | null | undefined, name: string) => {
-      if (!b64) return null;
-      const path = `${userId}/${runId}-${name}.png`;
-      const { error } = await supabaseAdmin.storage
-        .from("shots")
-        .upload(path, b64ToBytes(b64), { contentType: "image/png", upsert: true });
-      if (error) return null;
-      return path;
-    };
+    const formsToRecord: SingleFormResult[] =
+      result.forms && result.forms.length > 0
+        ? result.forms
+        : [
+            {
+              formIndex: 0,
+              heading: result.title ?? "Form 1",
+              formSelector: result.formSelector,
+              fields: result.fields ?? [],
+              submitLabel: result.submitLabel,
+              submitted: result.submitted,
+              outcome: result.outcome,
+              resultText: result.resultText,
+              filledShot: result.filledShot,
+              resultShot: result.resultShot,
+            },
+          ];
 
-    const filledPath = await upload(result.filledShot, "filled");
-    const resultPath = await upload(result.resultShot, "result");
+    const allRunIds: string[] = [];
 
-    const fields = result.fields ?? [];
-    const filledCount = fields.filter((f) => f.filled).length;
-    const outcome = result.outcome ?? "filled_only";
-    const passed =
-      data.mode === "fill_only"
-        ? fields.length > 0 && filledCount === fields.length
-        : outcome === "submitted" && filledCount === fields.length;
+    for (let i = 0; i < formsToRecord.length; i++) {
+      const f = formsToRecord[i];
+      let currentRunId = runId;
 
-    if (fields.length) {
-      await supabaseAdmin.from("run_fields").insert(
-        fields.map((f, i) => ({
-          run_id: runId,
-          user_id: userId,
-          label: f.label,
-          selector: f.selector,
-          field_type: f.field_type,
-          value_used: f.value_used,
-          required: !!f.required,
-          filled: !!f.filled,
-          note: f.note || null,
-          order_index: i,
-        })),
-      );
+      if (i > 0) {
+        // Create an additional run record for subsequent forms on the same page
+        const { data: nextRun, error: nextError } = await supabase
+          .from("runs")
+          .insert({
+            user_id: userId,
+            url: data.url,
+            mode: data.mode,
+            target_id: data.target_id ?? null,
+            status: "running",
+          })
+          .select("id")
+          .single();
+        if (nextError || !nextRun) continue;
+        currentRunId = nextRun.id as string;
+      }
+
+      allRunIds.push(currentRunId);
+
+      const upload = async (b64: string | null | undefined, name: string) => {
+        if (!b64) return null;
+        const path = `${userId}/${currentRunId}-${name}.png`;
+        const { error } = await supabaseAdmin.storage
+          .from("shots")
+          .upload(path, b64ToBytes(b64), { contentType: "image/png", upsert: true });
+        if (error) return null;
+        return path;
+      };
+
+      const filledPath = await upload(f.filledShot, "filled");
+      const resultPath = await upload(f.resultShot, "result");
+
+      const fields = f.fields ?? [];
+      const filledCount = fields.filter((field) => field.filled).length;
+      const outcome = f.outcome ?? "filled_only";
+      const passed =
+        data.mode === "fill_only"
+          ? fields.length > 0 && filledCount === fields.length
+          : outcome === "submitted" && filledCount === fields.length;
+
+      if (fields.length) {
+        await supabaseAdmin.from("run_fields").insert(
+          fields.map((field, fieldIdx) => ({
+            run_id: currentRunId,
+            user_id: userId,
+            label: field.label,
+            selector: field.selector,
+            field_type: field.field_type,
+            value_used: field.value_used,
+            required: !!field.required,
+            filled: !!field.filled,
+            note: field.note || null,
+            order_index: fieldIdx,
+          })),
+        );
+      }
+
+      const formTitleSuffix =
+        formsToRecord.length > 1
+          ? ` • Form ${i + 1}${f.heading ? `: ${f.heading}` : ""}`
+          : "";
+      const fullPageTitle = (result.title ? `${result.title}${formTitleSuffix}` : f.heading ?? null);
+
+      await supabase
+        .from("runs")
+        .update({
+          status: "done",
+          outcome,
+          passed,
+          page_title: fullPageTitle,
+          form_selector: f.formSelector ?? null,
+          fields_found: fields.length,
+          fields_filled: filledCount,
+          filled_shot_path: filledPath,
+          result_shot_path: resultPath,
+          result_text: f.resultText ?? null,
+          duration_ms: result.durationMs ?? null,
+        })
+        .eq("id", currentRunId);
     }
 
-    await supabase
-      .from("runs")
-      .update({
-        status: "done",
-        outcome,
-        passed,
-        page_title: result.title ?? null,
-        form_selector: result.formSelector ?? null,
-        fields_found: fields.length,
-        fields_filled: filledCount,
-        filled_shot_path: filledPath,
-        result_shot_path: resultPath,
-        result_text: result.resultText ?? null,
-        duration_ms: result.durationMs ?? null,
-      })
-      .eq("id", runId);
-
-    return { id: runId };
+    return { id: runId, ids: allRunIds };
   });
