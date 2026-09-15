@@ -32,6 +32,41 @@ export const Route = createFileRoute("/_authenticated/targets")({
   component: TargetsPage,
 });
 
+function deriveSiteNameFromUrl(rawUrl: string): string {
+  try {
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return "";
+    const formatted =
+      trimmed.startsWith("http://") || trimmed.startsWith("https://")
+        ? trimmed
+        : `https://${trimmed}`;
+    const parsed = new URL(formatted);
+    const domain = parsed.hostname.replace(/^www\./, "");
+    const domainParts = domain.split(".");
+    const mainDomain = domainParts.length > 1 ? domainParts[0] : domain;
+    const cleanDomain = mainDomain.charAt(0).toUpperCase() + mainDomain.slice(1);
+
+    const pathSegments = parsed.pathname
+      .split("/")
+      .filter(Boolean)
+      .map((seg) =>
+        seg
+          .replace(/[-_]+/g, " ")
+          .split(" ")
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ")
+      );
+
+    if (pathSegments.length > 0) {
+      return `${cleanDomain} - ${pathSegments.join(" / ")}`;
+    }
+    return cleanDomain;
+  } catch {
+    return "";
+  }
+}
+
 function TargetsPage() {
   const queryClient = useQueryClient();
   const fetchTargets = useServerFn(listTargets);
@@ -44,8 +79,17 @@ function TargetsPage() {
 
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
+  const [isNameManuallyEdited, setIsNameManuallyEdited] = useState(false);
   const [mode, setMode] = useState<TestMode>("fill_only");
   const [notes, setNotes] = useState("");
+
+  const handleUrlChange = (newUrl: string) => {
+    setUrl(newUrl);
+    if (!isNameManuallyEdited) {
+      const suggested = deriveSiteNameFromUrl(newUrl);
+      if (suggested) setName(suggested);
+    }
+  };
 
   const { data: targets = [], isLoading } = useQuery({
     queryKey: ["targets"],
@@ -69,6 +113,7 @@ function TargetsPage() {
       setOpen(false);
       setName("");
       setUrl("");
+      setIsNameManuallyEdited(false);
       setMode("fill_only");
       setNotes("");
     },
@@ -148,7 +193,10 @@ function TargetsPage() {
                   id="target-name"
                   placeholder="e.g. Lead Contact Form"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setIsNameManuallyEdited(e.target.value.trim().length > 0);
+                  }}
                   required
                 />
               </div>
@@ -160,7 +208,7 @@ function TargetsPage() {
                   placeholder="https://example.com/contact"
                   type="url"
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(e) => handleUrlChange(e.target.value)}
                   required
                 />
               </div>
@@ -202,7 +250,7 @@ function TargetsPage() {
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => { setOpen(false); setIsNameManuallyEdited(false); }}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saveMutation.isPending || !name || !url}>
