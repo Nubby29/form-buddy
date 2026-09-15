@@ -285,7 +285,14 @@ export const runTest = createServerFn({ method: "POST" })
         const text = await res.text();
         return fail(`Browser service error (${res.status}): ${text.slice(0, 300)}`);
       }
-      result = (await res.json()) as RunnerResult;
+      const rawBody: unknown = await res.json();
+      const wrapper = rawBody as { data?: RunnerResult; ok?: boolean } | null;
+      // Browserless may return the runner's { data, type } wrapper instead of the unwrapped payload
+      if (wrapper && typeof wrapper === "object" && wrapper.data && typeof wrapper.data === "object" && !("ok" in wrapper)) {
+        result = wrapper.data;
+      } else {
+        result = (rawBody ?? {}) as RunnerResult;
+      }
     } catch (e) {
       return fail(`Could not reach the browser service: ${(e as Error).message}`);
     }
@@ -296,7 +303,7 @@ export const runTest = createServerFn({ method: "POST" })
           ? (result.message || "No fillable form fields were found on this page.")
           : result.reason === "navigation_failed"
             ? `The page could not be loaded: ${result.message ?? "unknown error"}`
-            : (result.message || result.reason || "The test could not be completed.");
+            : `The test could not be completed. Runner returned: ${JSON.stringify(result).slice(0, 200)}`;
       return fail(reason);
     }
 
