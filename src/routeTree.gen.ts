@@ -8,91 +8,87 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from ./routes/__root
-import { Route as IndexRouteImport } from ./routes/index
-import { Route as AuthenticatedRouteRouteImport } from ./routes/_authenticated/route
-import { Route as AuthRouteImport } from ./routes/auth
-import { Route as AuthenticatedDashboardRouteImport } from ./routes/_authenticated/dashboard
-import { Route as AuthenticatedTargetsRouteImport } from ./routes/_authenticated/targets
-import { Route as RTokenRouteImport } from ./routes/r/
-import { Route as AuthenticatedRunsIdRouteImport } from ./routes/_authenticated/runs/
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedTargetsRouteImport } from './routes/_authenticated/targets'
+import { Route as RTokenRouteImport } from './routes/r/$token'
+import { Route as AuthenticatedRunsIdRouteImport } from './routes/_authenticated/runs/$id'
 
 const IndexRoute = IndexRouteImport.update({
-  id: /,
-  path: /,
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: /_authenticated,
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
-  id: /auth,
-  path: /auth,
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: /dashboard,
-  path: /dashboard,
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTargetsRoute = AuthenticatedTargetsRouteImport.update({
-  id: /targets,
-  path: /targets,
+  id: '/targets',
+  path: '/targets',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const RTokenRoute = RTokenRouteImport.update({
-  id: /r/,
-  path: /r/,
+  id: '/r/$token',
+  path: '/r/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRunsIdRoute = AuthenticatedRunsIdRouteImport.update({
-  id: /runs/,
-  path: /runs/,
+  id: '/runs/$id',
+  path: '/runs/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  /: typeof IndexRoute
-  /auth: typeof AuthRoute
-  /dashboard: typeof AuthenticatedDashboardRoute
-  /targets: typeof AuthenticatedTargetsRoute
-  /r/: typeof RTokenRoute
-  /runs/: typeof AuthenticatedRunsIdRoute
+  '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/targets': typeof AuthenticatedTargetsRoute
+  '/r/$token': typeof RTokenRoute
+  '/runs/$id': typeof AuthenticatedRunsIdRoute
 }
 export interface FileRoutesByTo {
-  /: typeof IndexRoute
-  /auth: typeof AuthRoute
-  /dashboard: typeof AuthenticatedDashboardRoute
-  /targets: typeof AuthenticatedTargetsRoute
-  /r/: typeof RTokenRoute
-  /runs/: typeof AuthenticatedRunsIdRoute
+  '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/targets': typeof AuthenticatedTargetsRoute
+  '/r/$token': typeof RTokenRoute
+  '/runs/$id': typeof AuthenticatedRunsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  /: typeof IndexRoute
-  /_authenticated: typeof AuthenticatedRouteRouteWithChildren
-  /auth: typeof AuthRoute
-  /_authenticated/dashboard: typeof AuthenticatedDashboardRoute
-  /_authenticated/targets: typeof AuthenticatedTargetsRoute
-  /r/: typeof RTokenRoute
-  /_authenticated/runs/: typeof AuthenticatedRunsIdRoute
+  '/': typeof IndexRoute
+  '/_authenticated\: typeof AuthenticatedRouteRouteWithChildren
+  '/auth\: typeof AuthRoute
+  '/_authenticated/dashboard\: typeof AuthenticatedDashboardRoute
+  '/_authenticated/targets\: typeof AuthenticatedTargetsRoute
+  '/r/\: typeof RTokenRoute
+  '/_authenticated/runs/\: typeof AuthenticatedRunsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: / | /auth | /dashboard | /targets | /r/ | /runs/
+  fullPaths: '/' | '/auth' | '/dashboard' | '/targets' | '/r/$token' | '/runs/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: / | /auth | /dashboard | /targets | /r/ | /runs/
+  to: '/' | '/auth' | '/dashboard' | '/targets' | '/r/$token' | '/runs/$id'
   id:
-    | __root__
-    | /
-    | /_authenticated
-    | /auth
-    | /_authenticated/dashboard
-    | /_authenticated/targets
-    | /r/
-    | /_authenticated/runs/
-  fileRoutesById: FileRoutesById
+    | '__root__'
+    | '/'
+    | '/_authenticated    | '/auth'
+    | '/_authenticated/dashboard    | '/_authenticated/targets    | '/r/$token'
+    | '/_authenticated/runs/  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
@@ -101,54 +97,50 @@ export interface RootRouteChildren {
   RTokenRoute: typeof RTokenRoute
 }
 
-declare module @tanstack/react-router {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    /: {
-      id: /
-      path: /
-      fullPath: /
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    /_authenticated: {
-      id: /_authenticated
-      path: 
-      fullPath: /
+    '/_authenticated\: {
+      id: '/_authenticated      path: ''
+      fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    /auth: {
-      id: /auth
-      path: /auth
-      fullPath: /auth
+    '/auth\: {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    /_authenticated/dashboard: {
-      id: /_authenticated/dashboard
-      path: /dashboard
-      fullPath: /dashboard
+    '/_authenticated/dashboard\: {
+      id: '/_authenticated/dashboard      path: '/dashboard'
+      fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    /_authenticated/targets: {
-      id: /_authenticated/targets
-      path: /targets
-      fullPath: /targets
+    '/_authenticated/targets\: {
+      id: '/_authenticated/targets      path: '/targets'
+      fullPath: '/targets'
       preLoaderRoute: typeof AuthenticatedTargetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    /r/: {
-      id: /r/
-      path: /r/
-      fullPath: /r/
+    '/r/\: {
+      id: '/r/$token'
+      path: '/r/$token'
+      fullPath: '/r/$token'
       preLoaderRoute: typeof RTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    /_authenticated/runs/: {
-      id: /_authenticated/runs/
-      path: /runs/
-      fullPath: /runs/
+    '/_authenticated/runs/\: {
+      id: '/_authenticated/runs/      path: '/runs/$id'
+      fullPath: '/runs/$id'
       preLoaderRoute: typeof AuthenticatedRunsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
@@ -180,9 +172,9 @@ export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from ./router.tsx
-import type { startInstance } from ./start.ts
-declare module @tanstack/react-start {
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>

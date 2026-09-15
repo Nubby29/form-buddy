@@ -22,6 +22,11 @@ export default async ({ page, context }) => {
       };
     }
 
+    // Wake up delayed scripts (Breeze / WP Rocket / lazy hydration)
+    await page.evaluate(function () {
+      window.dispatchEvent(new Event("scroll"));
+      window.dispatchEvent(new Event("mousemove"));
+    });
     // Wait for scripts and dynamic hydration to settle
     await new Promise(function (r) { setTimeout(r, 3500); });
 
@@ -142,12 +147,19 @@ export default async ({ page, context }) => {
         return "Test value";
       }
 
+      function triggerChange(el) {
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+        if (typeof window !== "undefined" && window.jQuery) {
+          try { window.jQuery(el).trigger("change"); } catch (e) {}
+        }
+      }
+
       function setNative(el, value) {
         const proto = el.tagName.toLowerCase() === "textarea" ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
         const setter = Object.getOwnPropertyDescriptor(proto, "value");
         if (setter && setter.set) setter.set.call(el, value); else el.value = value;
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-        el.dispatchEvent(new Event("change", { bubbles: true }));
+        triggerChange(el);
         el.dispatchEvent(new Event("blur", { bubbles: true }));
       }
 
@@ -237,8 +249,7 @@ export default async ({ page, context }) => {
             const chosen = validOpts.length > 0 ? validOpts[0] : (allOpts.length > 1 ? allOpts[1] : allOpts[0]);
             if (chosen && !isPlaceholder(chosen)) {
               el.value = chosen.value;
-              el.dispatchEvent(new Event("input", { bubbles: true }));
-              el.dispatchEvent(new Event("change", { bubbles: true }));
+              triggerChange(el);
               entry.value_used = (chosen.text || chosen.value).trim().slice(0, 60);
               entry.filled = true;
             } else {
