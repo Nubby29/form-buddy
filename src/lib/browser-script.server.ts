@@ -397,10 +397,25 @@ export default async ({ page, context }) => {
             note: "",
           };
 
+          // Conditional-logic plugins can hide a field between planning and filling.
+          if (!isElementVisible(el) || (el.closest && el.closest(".cfef-hidden"))) {
+            entry.filled = false;
+            entry.value_used = "";
+            entry.note = "hidden by conditional logic";
+            fields.push(entry);
+            continue;
+          }
+
           try {
             if (type === "file") {
-              entry.value_used = "(optional file upload skipped)";
-              entry.filled = true;
+              if (entry.required) {
+                entry.value_used = "(file upload skipped)";
+                entry.filled = false;
+                entry.note = "required file upload cannot be automated";
+              } else {
+                entry.value_used = "(optional file upload skipped)";
+                entry.filled = true;
+              }
             } else if (type === "checkbox") {
               if (!el.checked) el.click();
               entry.value_used = "checked";
