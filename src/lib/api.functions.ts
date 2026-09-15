@@ -346,7 +346,7 @@ export const runTest = createServerFn({ method: "POST" })
     const allRunIds: string[] = [];
 
     for (let i = 0; i < formsToRecord.length; i++) {
-      const f = formsToRecord[i];
+      const f = formsToRecord[i]!;
       let currentRunId = runId;
 
       if (i > 0) {
