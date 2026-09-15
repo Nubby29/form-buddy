@@ -453,3 +453,26 @@ export const runTest = createServerFn({ method: "POST" })
 
     return { id: runId, ids: allRunIds };
   });
+
+export const fetchPageTitle = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ url: z.string().trim() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    try {
+      const targetUrl = data.url.startsWith("http") ? data.url : `https://${data.url}`;
+      const res = await fetch(targetUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+        signal: AbortSignal.timeout(4000),
+      });
+      const html = await res.text();
+      const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      if (match && match[1]) {
+        const raw = match[1].trim().replace(/\s+/g, " ");
+        const clean = raw.split(/[|•–—]/)[0].trim() || raw;
+        return { title: clean };
+      }
+    } catch {}
+    return { title: null };
+  });

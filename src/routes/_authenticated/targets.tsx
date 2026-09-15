@@ -7,7 +7,7 @@ import { BatchTester } from "@/components/batch-tester";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { RunForm } from "@/components/run-form";
-import { listTargets, saveTarget, deleteTarget, type TestMode } from "@/lib/api.functions";
+import { listTargets, saveTarget, deleteTarget, fetchPageTitle, type TestMode } from "@/lib/api.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,10 +41,35 @@ function deriveSiteNameFromUrl(rawUrl: string): string {
         ? trimmed
         : `https://${trimmed}`;
     const parsed = new URL(formatted);
-    const domain = parsed.hostname.replace(/^www\./, "");
+    const domain = parsed.hostname.replace(/^www\./i, "");
     const domainParts = domain.split(".");
-    const mainDomain = domainParts.length > 1 ? domainParts[0] : domain;
-    const cleanDomain = mainDomain.charAt(0).toUpperCase() + mainDomain.slice(1);
+    let domainName = domainParts.length > 1 ? domainParts[0] : domain;
+
+    // Split compound words
+    const commonWords = [
+      "recruiters", "recruiting", "recruiter", "practice", "testing",
+      "metal", "forms", "buddy", "check", "consultation", "search",
+      "lead", "contact", "support", "help", "app", "portal",
+      "tech", "dev", "soft", "ware", "hub", "labs", "lab",
+      "shop", "store", "group", "cloud", "data"
+    ];
+
+    let spaced = domainName;
+    for (const w of commonWords) {
+      const reg = new RegExp(`(?<![a-z])(${w})|(${w})(?![a-z])|(${w})`, "gi");
+      spaced = spaced.replace(reg, " $1$2$3 ");
+    }
+    spaced = spaced.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+
+    const capitalizedDomain = (spaced || domainName)
+      .split(" ")
+      .filter(Boolean)
+      .map((w) =>
+        w.length <= 2
+          ? w.toUpperCase()
+          : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+      )
+      .join(" ");
 
     const pathSegments = parsed.pathname
       .split("/")
@@ -59,11 +84,11 @@ function deriveSiteNameFromUrl(rawUrl: string): string {
       );
 
     if (pathSegments.length > 0) {
-      return `${cleanDomain} - ${pathSegments.join(" / ")}`;
+      return `${capitalizedDomain} - ${pathSegments.join(" / ")}`;
     }
-    return cleanDomain;
+    return capitalizedDomain;
   } catch {
-    return "";
+    return rawUrl;
   }
 }
 
@@ -72,6 +97,7 @@ function TargetsPage() {
   const fetchTargets = useServerFn(listTargets);
   const addTarget = useServerFn(saveTarget);
   const removeTarget = useServerFn(deleteTarget);
+  const getTitle = useServerFn(fetchPageTitle);
 
   const [open, setOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
@@ -83,12 +109,33 @@ function TargetsPage() {
   const [mode, setMode] = useState<TestMode>("fill_only");
   const [notes, setNotes] = useState("");
 
-  const handleUrlChange = (newUrl: string) => {
+  const handleUrlChange = async (newUrl: string) => {
     setUrl(newUrl);
-    if (!isNameManuallyEdited) {
-      const suggested = deriveSiteNameFromUrl(newUrl);
-      if (suggested) setName(suggested);
+    const suggested = deriveSiteNameFromUrl(newUrl);
+    if (!isNameManuallyEdited && suggested) {
+      setName(suggested);
     }
+    if (newUrl.trim().length > 7 && (newUrl.includes(".") || newUrl.startsWith("http"))) {
+      try {
+        const res = await getTitle({ data: { url: newUrl } });
+        if (res && res.title && !isNameManuallyEdited) {
+          setName(res.title);
+        }
+      } catch {}
+    }
+  };
+
+  const handleNameChange = (val: string) => {
+    if (val.startsWith("http://") || val.startsWith("https://") || (val.includes(".com") && !val.includes(" "))) {
+      setUrl(val);
+      const suggested = deriveSiteNameFromUrl(val);
+      setName(suggested || val);
+      setIsNameManuallyEdited(false);
+      handleUrlChange(val);
+      return;
+    }
+    setName(val);
+    setIsNameManuallyEdited(val.trim().length > 0);
   };
 
   const { data: targets = [], isLoading } = useQuery({
@@ -188,20 +235,6 @@ function TargetsPage() {
               className="space-y-4 pt-2"
             >
               <div className="space-y-1.5">
-                <Label htmlFor="target-name">Site Name</Label>
-                <Input
-                  id="target-name"
-                  placeholder="e.g. Lead Contact Form"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setIsNameManuallyEdited(e.target.value.trim().length > 0);
-                  }}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
                 <Label htmlFor="target-url">URL</Label>
                 <Input
                   id="target-url"
@@ -209,6 +242,17 @@ function TargetsPage() {
                   type="url"
                   value={url}
                   onChange={(e) => handleUrlChange(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="target-name">Site Name</Label>
+                <Input
+                  id="target-name"
+                  placeholder="e.g. Lead Contact Form"
+                  value={name}
+                  onChange={(e) => handleNameChange(e.target.value)}
                   required
                 />
               </div>
