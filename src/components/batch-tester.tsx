@@ -92,6 +92,7 @@ export function BatchTester({
       }
 
       const current = queue[i];
+      if (!current) continue;
       setItems((prev) =>
         prev.map((item, idx) => (idx === i ? { ...item, status: "running" } : item))
       );
