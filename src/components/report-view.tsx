@@ -80,14 +80,18 @@ export function ReportView({
           <div className="flex flex-wrap gap-2.5">
             {siblings.map((sib, idx) => {
               const isCurrent = sib.id === run.id;
-              const formNum = idx + 1;
-              let formLabel = `Form ${formNum}`;
+              let formNum = idx + 1;
+              let formSubName = "";
               if (sib.page_title) {
-                const match = sib.page_title.match(/Form \d+[:\s•]*(.*)/i);
-                if (match && match[1]?.trim()) {
-                  formLabel = `Form ${formNum}: ${match[1].trim()}`;
+                const match = sib.page_title.match(/Form (\d+)(?:[:\s•]*(.*))?/i);
+                if (match) {
+                  formNum = parseInt(match[1]!, 10) || formNum;
+                  if (match[2]?.trim()) {
+                    formSubName = match[2].trim();
+                  }
                 }
               }
+              const formLabel = formSubName ? `Form ${formNum}: ${formSubName}` : `Form ${formNum}`;
               const sibPassed = sib.passed;
               return (
                 <button

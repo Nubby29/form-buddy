@@ -207,8 +207,8 @@ export const getRun = createServerFn({ method: "GET" })
 
     try {
       const createdAtMs = new Date(run.created_at).getTime();
-      const windowStart = new Date(createdAtMs - 120_000).toISOString();
-      const windowEnd = new Date(createdAtMs + 120_000).toISOString();
+      const windowStart = new Date(createdAtMs - 180_000).toISOString();
+      const windowEnd = new Date(createdAtMs + 180_000).toISOString();
 
       const { data: sibs } = await context.supabase
         .from("runs")
@@ -220,7 +220,40 @@ export const getRun = createServerFn({ method: "GET" })
         .order("created_at", { ascending: true });
 
       if (sibs && sibs.length > 1) {
-        siblings = sibs;
+        // Only cluster runs created contiguously in the same test execution (within 35s of each other)
+        const sorted = [...sibs].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
+        const currentIdx = sorted.findIndex((s) => s.id === run.id);
+        if (currentIdx !== -1) {
+          const MAX_GAP_MS = 35_000;
+          let left = currentIdx;
+          while (left > 0) {
+            const gap =
+              new Date(sorted[left]!.created_at).getTime() -
+              new Date(sorted[left - 1]!.created_at).getTime();
+            if (gap <= MAX_GAP_MS) {
+              left--;
+            } else {
+              break;
+            }
+          }
+          let right = currentIdx;
+          while (right < sorted.length - 1) {
+            const gap =
+              new Date(sorted[right + 1]!.created_at).getTime() -
+              new Date(sorted[right]!.created_at).getTime();
+            if (gap <= MAX_GAP_MS) {
+              right++;
+            } else {
+              break;
+            }
+          }
+          const cluster = sorted.slice(left, right + 1);
+          if (cluster.length > 1) {
+            siblings = cluster;
+          }
+        }
       }
     } catch {}
 
@@ -285,8 +318,8 @@ export const getSharedReport = createServerFn({ method: "GET" })
 
     try {
       const createdAtMs = new Date(run.created_at).getTime();
-      const windowStart = new Date(createdAtMs - 120_000).toISOString();
-      const windowEnd = new Date(createdAtMs + 120_000).toISOString();
+      const windowStart = new Date(createdAtMs - 180_000).toISOString();
+      const windowEnd = new Date(createdAtMs + 180_000).toISOString();
 
       const { data: sibs } = await supabaseAdmin
         .from("runs")
@@ -298,7 +331,40 @@ export const getSharedReport = createServerFn({ method: "GET" })
         .order("created_at", { ascending: true });
 
       if (sibs && sibs.length > 1) {
-        siblings = sibs.filter((s: any) => s.is_public);
+        const publicSibs = sibs.filter((s: any) => s.is_public);
+        const sorted = [...publicSibs].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
+        const currentIdx = sorted.findIndex((s) => s.id === run.id);
+        if (currentIdx !== -1) {
+          const MAX_GAP_MS = 35_000;
+          let left = currentIdx;
+          while (left > 0) {
+            const gap =
+              new Date(sorted[left]!.created_at).getTime() -
+              new Date(sorted[left - 1]!.created_at).getTime();
+            if (gap <= MAX_GAP_MS) {
+              left--;
+            } else {
+              break;
+            }
+          }
+          let right = currentIdx;
+          while (right < sorted.length - 1) {
+            const gap =
+              new Date(sorted[right + 1]!.created_at).getTime() -
+              new Date(sorted[right]!.created_at).getTime();
+            if (gap <= MAX_GAP_MS) {
+              right++;
+            } else {
+              break;
+            }
+          }
+          const cluster = sorted.slice(left, right + 1);
+          if (cluster.length > 1) {
+            siblings = cluster;
+          }
+        }
       }
     } catch {}
 
