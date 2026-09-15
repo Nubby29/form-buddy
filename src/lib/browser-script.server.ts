@@ -1,7 +1,8 @@
 // Source of the script executed inside the remote Browserless browser.
 // It is sent as plain text, so it must be self-contained ES module source.
 export const BROWSER_SCRIPT = `
-export default async function ({ page, context }) {
+
+export default async ({ page, context }) => {
   const url = context.url;
   const mode = context.mode;
   const started = Date.now();
@@ -263,7 +264,16 @@ export default async function ({ page, context }) {
         fields: fields,
         submitLabel: submitLabel,
         isForm: scope.tagName.toLowerCase() === "form",
-        formSelector: scope.tagName.toLowerCase() + (scope.id ? "#" + scope.id : "") + (nameAttr ? "[name=\"" + nameAttr + "\"]" : ""),
+        formSelector: (function () {
+          const tag = scope.tagName.toLowerCase();
+          let sel = tag;
+          try {
+            if (scope.id) sel += "#" + CSS.escape(scope.id);
+            const nm = scope.getAttribute("name");
+            if (nm) sel += '[name="' + nm + '"]';
+          } catch (e) {}
+          return sel;
+        })(),
       };
     });
 
