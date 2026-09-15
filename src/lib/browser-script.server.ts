@@ -58,6 +58,23 @@ export default async ({ page, context }) => {
         });
       } catch (e) {}
       await new Promise(function (r) { setTimeout(r, 3000); });
+
+      // Nudge conditional-logic plugins (e.g. Extensions for Elementor Form) to
+      // evaluate their rules: they often only hide fields after a change event.
+      try {
+        await page.evaluate(function () {
+          const els = Array.prototype.slice.call(document.querySelectorAll("select, input"));
+          for (let i = 0; i < els.length; i++) {
+            const el = els[i];
+            try {
+              el.dispatchEvent(new Event("input", { bubbles: true }));
+              el.dispatchEvent(new Event("change", { bubbles: true }));
+              if (window.jQuery) { try { window.jQuery(el).trigger("change"); } catch (e) {} }
+            } catch (e) {}
+          }
+        });
+      } catch (e) {}
+      await new Promise(function (r) { setTimeout(r, 1500); });
       return { ok: true };
     }
 
