@@ -32,15 +32,18 @@ type FieldResult = {
 
 type SingleFormResult = {
   formIndex: number;
-  heading?: string;
-  formSelector?: string;
-  fields?: FieldResult[];
-  submitLabel?: string;
-  submitted?: boolean;
-  outcome?: string;
-  resultText?: string;
-  filledShot?: string | null;
-  resultShot?: string | null;
+  ok?: boolean | undefined;
+  reason?: string | undefined;
+  message?: string | undefined;
+  heading?: string | undefined;
+  formSelector?: string | undefined;
+  fields?: FieldResult[] | undefined;
+  submitLabel?: string | undefined;
+  submitted?: boolean | undefined;
+  outcome?: string | undefined;
+  resultText?: string | undefined;
+  filledShot?: string | null | undefined;
+  resultShot?: string | null | undefined;
 };
 
 type RunnerResult = {
@@ -343,7 +346,7 @@ export const runTest = createServerFn({ method: "POST" })
     const allRunIds: string[] = [];
 
     for (let i = 0; i < formsToRecord.length; i++) {
-      const f = formsToRecord[i];
+      const f = formsToRecord[i]!;
       let currentRunId = runId;
 
       if (i > 0) {
@@ -359,11 +362,32 @@ export const runTest = createServerFn({ method: "POST" })
           })
           .select("id")
           .single();
-        if (nextError || !nextRun) continue;
+        if (nextError || !nextRun) {
+          throw new Error(
+            `Could not record form ${i + 1} of ${formsToRecord.length}: ${
+              nextError?.message ?? "run row was not created"
+            }`,
+          );
+        }
         currentRunId = nextRun.id as string;
       }
 
       allRunIds.push(currentRunId);
+
+      if (f.ok === false) {
+        await supabase
+          .from("runs")
+          .update({
+            status: "failed",
+            outcome: "error",
+            passed: false,
+            page_title: f.heading ?? null,
+            error_message:
+              f.message ?? f.reason ?? "This form could not be filled by the automated test.",
+          })
+          .eq("id", currentRunId);
+        continue;
+      }
 
       const upload = async (b64: string | null | undefined, name: string) => {
         if (!b64) return null;

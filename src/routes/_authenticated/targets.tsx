@@ -211,8 +211,10 @@ function TargetsPage() {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
+
 
       {isLoading ? (
         <div className="rounded-xl border border-border bg-card p-12 text-center text-sm text-muted-foreground">

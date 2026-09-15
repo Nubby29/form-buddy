@@ -58,6 +58,23 @@ export default async ({ page, context }) => {
         });
       } catch (e) {}
       await new Promise(function (r) { setTimeout(r, 3000); });
+
+      // Nudge conditional-logic plugins (e.g. Extensions for Elementor Form) to
+      // evaluate their rules: they often only hide fields after a change event.
+      try {
+        await page.evaluate(function () {
+          const els = Array.prototype.slice.call(document.querySelectorAll("select, input"));
+          for (let i = 0; i < els.length; i++) {
+            const el = els[i];
+            try {
+              el.dispatchEvent(new Event("input", { bubbles: true }));
+              el.dispatchEvent(new Event("change", { bubbles: true }));
+              if (window.jQuery) { try { window.jQuery(el).trigger("change"); } catch (e) {} }
+            } catch (e) {}
+          }
+        });
+      } catch (e) {}
+      await new Promise(function (r) { setTimeout(r, 1500); });
       return { ok: true };
     }
 
@@ -296,6 +313,7 @@ export default async ({ page, context }) => {
           if (has(h, "first name", "firstname", "given", "fname") && !has(h, "last name", "lastname", "surname", "family", "lname")) return "Jordan";
           if (has(h, "last name", "lastname", "surname", "family", "lname")) return "Ellis";
           if (has(h, "company", "organisation", "organization", "business")) return "Northwind Testing Ltd";
+          if (has(h, "location", "city, state", "preferred job location", "locations")) return "San Francisco, CA";
           if (has(h, "job", "role", "title") && !has(h, "subject")) return "QA Engineer";
           if (has(h, "subject")) return "Automated form test";
           if (has(h, "address", "street")) return "120 Market Street";
@@ -379,10 +397,25 @@ export default async ({ page, context }) => {
             note: "",
           };
 
+          // Conditional-logic plugins can hide a field between planning and filling.
+          if (!isElementVisible(el) || (el.closest && el.closest(".cfef-hidden"))) {
+            entry.filled = false;
+            entry.value_used = "";
+            entry.note = "hidden by conditional logic";
+            fields.push(entry);
+            continue;
+          }
+
           try {
             if (type === "file") {
-              entry.value_used = "(optional file upload skipped)";
-              entry.filled = true;
+              if (entry.required) {
+                entry.value_used = "(file upload skipped)";
+                entry.filled = false;
+                entry.note = "required file upload cannot be automated";
+              } else {
+                entry.value_used = "(optional file upload skipped)";
+                entry.filled = true;
+              }
             } else if (type === "checkbox") {
               if (!el.checked) el.click();
               entry.value_used = "checked";
@@ -467,7 +500,23 @@ export default async ({ page, context }) => {
         };
       }, fIdx);
 
-      if (!plan || !plan.ok) continue;
+      if (!plan || !plan.ok) {
+        formResults.push({
+          formIndex: fIdx,
+          ok: false,
+          heading: meta.heading,
+          reason: (plan && plan.reason) || "plan_failed",
+          message: (plan && plan.message) || "This form could not be prepared for testing.",
+          formSelector: meta.selector,
+          fields: [],
+          submitted: false,
+          outcome: "error",
+          resultText: "",
+          filledShot: null,
+          resultShot: null,
+        });
+        continue;
+      }
 
       // Small wait to allow DOM to visually reflect input values
       await new Promise(function (r) { setTimeout(r, 1200); });

@@ -71,24 +71,29 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_authenticated\: typeof AuthenticatedRouteRouteWithChildren
-  '/auth\: typeof AuthRoute
-  '/_authenticated/dashboard\: typeof AuthenticatedDashboardRoute
-  '/_authenticated/targets\: typeof AuthenticatedTargetsRoute
-  '/r/\: typeof RTokenRoute
-  '/_authenticated/runs/\: typeof AuthenticatedRunsIdRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/targets': typeof AuthenticatedTargetsRoute
+  '/r/$token': typeof RTokenRoute
+  '/_authenticated/runs/$id': typeof AuthenticatedRunsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/targets' | '/r/$token' | '/runs/$id'
+  fullPaths:
+    '/' | '/auth' | '/dashboard' | '/targets' | '/r/$token' | '/runs/$id'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/auth' | '/dashboard' | '/targets' | '/r/$token' | '/runs/$id'
   id:
     | '__root__'
     | '/'
-    | '/_authenticated    | '/auth'
-    | '/_authenticated/dashboard    | '/_authenticated/targets    | '/r/$token'
-    | '/_authenticated/runs/  fileRoutesById: FileRoutesById
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/targets'
+    | '/r/$token'
+    | '/_authenticated/runs/$id'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
@@ -106,40 +111,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated\: {
-      id: '/_authenticated      path: ''
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth\: {
+    '/auth': {
       id: '/auth'
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/dashboard\: {
-      id: '/_authenticated/dashboard      path: '/dashboard'
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/targets\: {
-      id: '/_authenticated/targets      path: '/targets'
+    '/_authenticated/targets': {
+      id: '/_authenticated/targets'
+      path: '/targets'
       fullPath: '/targets'
       preLoaderRoute: typeof AuthenticatedTargetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/r/\: {
+    '/r/$token': {
       id: '/r/$token'
       path: '/r/$token'
       fullPath: '/r/$token'
       preLoaderRoute: typeof RTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/runs/\: {
-      id: '/_authenticated/runs/      path: '/runs/$id'
+    '/_authenticated/runs/$id': {
+      id: '/_authenticated/runs/$id'
+      path: '/runs/$id'
       fullPath: '/runs/$id'
       preLoaderRoute: typeof AuthenticatedRunsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
